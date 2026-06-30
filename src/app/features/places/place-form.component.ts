@@ -54,12 +54,12 @@ import { LoadingComponent } from '../../shared/components/loading.component';
               <div class="grid grid-cols-2 gap-3">
                 <fieldset class="fieldset">
                   <label class="fieldset-label">Latitud *</label>
-                  <input type="number" step="any" class="input w-full" [(ngModel)]="form.latitude" name="latitude" required />
+                  <input type="number" step="any" class="input w-full" [(ngModel)]="form.latitude" name="latitude" required (ngModelChange)="onCoordChange()" />
                 </fieldset>
 
                 <fieldset class="fieldset">
                   <label class="fieldset-label">Longitud *</label>
-                  <input type="number" step="any" class="input w-full" [(ngModel)]="form.longitude" name="longitude" required />
+                  <input type="number" step="any" class="input w-full" [(ngModel)]="form.longitude" name="longitude" required (ngModelChange)="onCoordChange()" />
                 </fieldset>
               </div>
 
@@ -122,6 +122,14 @@ export class PlaceFormComponent implements OnInit {
 
   protected readonly clipboardCoords = signal('');
 
+  private readonly coordToken = signal(0);
+
+  protected readonly initialCoords = computed(() => {
+    this.coordToken();
+    if (!this.form.latitude && !this.form.longitude) return null;
+    return { lat: this.form.latitude, lng: this.form.longitude };
+  });
+
   protected readonly form: CreatePlacePayload & { notes?: string } = {
     businessName: '',
     contactName: '',
@@ -131,11 +139,6 @@ export class PlaceFormComponent implements OnInit {
     longitude: 0,
     notes: '',
   };
-
-  protected readonly initialCoords = computed(() => {
-    if (!this.form.latitude && !this.form.longitude) return null;
-    return { lat: this.form.latitude, lng: this.form.longitude };
-  });
 
   private placeId?: number;
 
@@ -161,6 +164,7 @@ export class PlaceFormComponent implements OnInit {
           this.form.longitude = Number(res.data.longitude);
           this.clipboardCoords.set(`${res.data.latitude}, ${res.data.longitude}`);
           this.form.notes = res.data.notes ?? '';
+          this.coordToken.update(v => v + 1);
         }
       },
       error: () => this.loading.set(false),
@@ -168,10 +172,16 @@ export class PlaceFormComponent implements OnInit {
     });
   }
 
+  protected onCoordChange(): void {
+    this.clipboardCoords.set(`${this.form.latitude}, ${this.form.longitude}`);
+    this.coordToken.update(v => v + 1);
+  }
+
   protected onMapClick(event: { latitude: number; longitude: number }): void {
     this.form.latitude = event.latitude;
     this.form.longitude = event.longitude;
     this.clipboardCoords.set(`${event.latitude}, ${event.longitude}`);
+    this.coordToken.update(v => v + 1);
   }
 
   protected onPasteCoords(value: string): void {
@@ -182,6 +192,7 @@ export class PlaceFormComponent implements OnInit {
       const lng = parseFloat(parts[1]);
       if (!isNaN(lat)) this.form.latitude = lat;
       if (!isNaN(lng)) this.form.longitude = lng;
+      this.coordToken.update(v => v + 1);
     }
   }
 

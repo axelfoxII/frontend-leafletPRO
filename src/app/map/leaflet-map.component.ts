@@ -58,6 +58,14 @@ export class LeafletMapComponent implements AfterViewInit, OnDestroy {
         this.updateMarkers(currentMarkers);
       }
     });
+
+    effect(() => {
+      const coords = this.initialCoords();
+      if (this.mapInitialized && coords) {
+        this.setTempMarker(coords.lat, coords.lng);
+        this.map?.setView([coords.lat, coords.lng], 15);
+      }
+    });
   }
 
   ngAfterViewInit(): void {
@@ -114,6 +122,7 @@ export class LeafletMapComponent implements AfterViewInit, OnDestroy {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (!force && this.initialCoords()) return;
         const coords: [number, number] = [position.coords.latitude, position.coords.longitude];
 
         if (this.tempMarker) {
